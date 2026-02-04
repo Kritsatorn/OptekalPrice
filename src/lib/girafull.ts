@@ -9,18 +9,16 @@ interface ProductHandle {
 interface ProductVariant {
   id: number;
   title: string;
-  price: string;
-  available?: boolean;
+  price: number;
+  available: boolean;
 }
 
-interface ProductJSON {
-  product: {
-    title: string;
-    handle: string;
-    images: { src: string }[];
-    variants: ProductVariant[];
-    tags: string[];
-  };
+interface ProductJS {
+  title: string;
+  handle: string;
+  images: string[];
+  variants: ProductVariant[];
+  tags: string[];
 }
 
 // Phase 1: Search Girafull for product handles (regex-based, no cheerio)
@@ -110,10 +108,8 @@ async function searchCardForLang(card: ParsedCard, lang: CardLanguage): Promise<
     for (const handle of handles) {
       if (!matchesLanguage(handle.handle, lang)) continue;
 
-      const productData = await fetchProductJSON(handle.handle);
-      if (!productData) continue;
-
-      const product = productData.product;
+      const product = await fetchProductJS(handle.handle);
+      if (!product) continue;
 
       if (!matchesFoilType(product.handle, product.title, product.tags, card.foilType)) {
         continue;
@@ -124,7 +120,7 @@ async function searchCardForLang(card: ParsedCard, lang: CardLanguage): Promise<
       }
 
       const { price, available } = extractNMPrice(product.variants);
-      const imageUrl = product.images.length > 0 ? product.images[0].src : null;
+      const imageUrl = product.images.length > 0 ? product.images[0] : null;
       const setCode = extractCardId(product.title, product.handle);
 
       return {
@@ -162,9 +158,9 @@ export async function searchCardDual(card: ParsedCard): Promise<DualCardResult> 
   };
 }
 
-// Phase 2: Fetch product JSON
-async function fetchProductJSON(handle: string): Promise<ProductJSON | null> {
-  const url = `${BASE_URL}/products/${handle}.json`;
+// Phase 2: Fetch product JS (uses .js endpoint which includes variant availability)
+async function fetchProductJS(handle: string): Promise<ProductJS | null> {
+  const url = `${BASE_URL}/products/${handle}.js`;
 
   const res = await fetch(url, {
     headers: {
@@ -176,7 +172,7 @@ async function fetchProductJSON(handle: string): Promise<ProductJSON | null> {
   if (!res.ok) return null;
 
   try {
-    return await res.json() as ProductJSON;
+    return await res.json() as ProductJS;
   } catch {
     return null;
   }
@@ -246,7 +242,7 @@ function matchesCardName(productTitle: string, userCardName: string): boolean {
 }
 
 // Extract NM price from variants
-// Girafull sets price to 0 for sold-out grades; available field may not exist in JSON
+// .js endpoint returns price in hundredths (e.g. 550000 = ¥5,500) and a reliable available boolean
 function extractNMPrice(variants: ProductVariant[]): { price: number | null; available: boolean } {
   const nmVariant = variants.find(v => {
     const t = v.title.toLowerCase();
@@ -254,18 +250,16 @@ function extractNMPrice(variants: ProductVariant[]): { price: number | null; ava
   });
 
   if (nmVariant) {
-    const price = parseInt(nmVariant.price, 10);
     return {
-      price,
-      available: nmVariant.available ?? price > 0,
+      price: Math.round(nmVariant.price / 100),
+      available: nmVariant.available,
     };
   }
 
   if (variants.length > 0) {
-    const price = parseInt(variants[0].price, 10);
     return {
-      price,
-      available: variants[0].available ?? price > 0,
+      price: Math.round(variants[0].price / 100),
+      available: variants[0].available,
     };
   }
 
@@ -311,10 +305,8 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
     for (const handle of handles) {
       if (!matchesLanguage(handle.handle, lang)) continue;
 
-      const productData = await fetchProductJSON(handle.handle);
-      if (!productData) continue;
-
-      const product = productData.product;
+      const product = await fetchProductJS(handle.handle);
+      if (!product) continue;
 
       if (!matchesFoilType(product.handle, product.title, product.tags, card.foilType)) {
         continue;
@@ -325,7 +317,7 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
       }
 
       const { price, available } = extractNMPrice(product.variants);
-      const imageUrl = product.images.length > 0 ? product.images[0].src : null;
+      const imageUrl = product.images.length > 0 ? product.images[0] : null;
       const setCode = extractCardId(product.title, product.handle);
 
       return {

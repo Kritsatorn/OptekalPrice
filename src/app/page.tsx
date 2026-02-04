@@ -17,6 +17,7 @@ import LanguagePicker from '@/components/LanguagePicker';
 import TabSwitcher from '@/components/TabSwitcher';
 import CardBrowser from '@/components/CardBrowser';
 import BuildList from '@/components/BuildList';
+import CommandDeck from '@/components/CommandDeck';
 
 export default function Home() {
   const {
@@ -41,12 +42,12 @@ export default function Home() {
   } = useCardSearch();
 
   const { theme, toggle, mounted } = useTheme();
-  const [activeTab, setActiveTab] = useState<'text' | 'browser'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'browser' | 'deck'>('text');
 
   const buildList = useBuildList();
   const browser = useCardBrowser();
 
-  const handleTabChange = (tab: 'text' | 'browser') => {
+  const handleTabChange = (tab: 'text' | 'browser' | 'deck') => {
     setActiveTab(tab);
     if (tab === 'browser') {
       browser.load();
@@ -130,15 +131,17 @@ export default function Home() {
 
         {/* Main Panel */}
         <div className="glass-panel rounded-panel bg-panel p-4 sm:p-5 md:p-6 lg:p-7">
-          {/* Buyer Info (shared) */}
-          <div className="glass-card shimmer-border rounded-card bg-card shadow-card p-card-p mb-5">
-            <BuyerInfo value={buyerName} onChange={setBuyerName} />
-          </div>
-
           {/* Tab Switcher */}
           <div className="mb-5">
             <TabSwitcher activeTab={activeTab} onChange={handleTabChange} />
           </div>
+
+          {/* Buyer Info (shared between text & browser) */}
+          {activeTab !== 'deck' && (
+            <div className="glass-card shimmer-border rounded-card bg-card shadow-card p-card-p mb-5">
+              <BuyerInfo value={buyerName} onChange={setBuyerName} />
+            </div>
+          )}
 
           {/* Text Input Tab */}
           {activeTab === 'text' && (
@@ -201,6 +204,13 @@ export default function Home() {
                 dualLang={dualLang}
                 onDualLangChange={setDualLang}
               />
+            </div>
+          )}
+
+          {/* Command Deck Tab */}
+          {activeTab === 'deck' && (
+            <div className="mb-5">
+              <CommandDeck />
             </div>
           )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-type Tab = 'text' | 'browser';
+type Tab = 'text' | 'browser' | 'deck';
 
 interface TabSwitcherProps {
   activeTab: Tab;
@@ -11,6 +11,7 @@ export default function TabSwitcher({ activeTab, onChange }: TabSwitcherProps) {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'text', label: 'Text Input' },
     { key: 'browser', label: 'Card Browser' },
+    { key: 'deck', label: 'Command Deck' },
   ];
 
   return (
