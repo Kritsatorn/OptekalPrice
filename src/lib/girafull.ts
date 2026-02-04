@@ -281,9 +281,12 @@ function extractSetCode(tags: string[]): string | null {
 }
 
 // Main search function for a single card
+// If card.lang is set, search that specific language; otherwise default to EN
 export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
+  const lang: CardLanguage = card.lang || 'EN';
+
   try {
-    const handles = await searchProducts(card.cardName);
+    const handles = await searchProductsForLang(card.cardName, lang);
 
     if (handles.length === 0) {
       return {
@@ -301,6 +304,8 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
     }
 
     for (const handle of handles) {
+      if (!matchesLanguage(handle.handle, lang)) continue;
+
       const productData = await fetchProductJSON(handle.handle);
       if (!productData) continue;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { CardSearchResult, FoilType } from '@/lib/types';
+import { CardSearchResult, FoilType, CardLanguage } from '@/lib/types';
 
 const foilBadgeStyles: Record<FoilType, { base: string; glow: string }> = {
   NF: {
@@ -25,6 +25,19 @@ const foilBadgeStyles: Record<FoilType, { base: string; glow: string }> = {
   },
 };
 
+const langBadgeStyles: Record<CardLanguage, string> = {
+  EN: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+  JP: 'bg-red-500/20 text-red-400 border border-red-500/30',
+};
+
+function detectLanguage(result: CardSearchResult): CardLanguage | null {
+  const title = result.productTitle.toLowerCase();
+  const url = result.productUrl.toLowerCase();
+  if (title.includes('【jp】') || url.includes('_langjp')) return 'JP';
+  if (title.includes('【en】') || url.includes('_langen')) return 'EN';
+  return null;
+}
+
 interface ResultsTableProps {
   results: CardSearchResult[];
 }
@@ -47,6 +60,8 @@ export default function ResultsTable({ results }: ResultsTableProps) {
               <tr className="border-b border-divider">
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Card Name</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Foil</th>
+                <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Lang</th>
+                <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Set</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Qty</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Price</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Subtotal</th>
@@ -55,6 +70,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
             <tbody>
               {validResults.map((result, i) => {
                 const badge = foilBadgeStyles[result.foilType];
+                const lang = detectLanguage(result);
                 return (
                   <tr
                     key={i}
@@ -65,6 +81,16 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${badge.base} ${badge.glow}`}>
                         {result.foilType}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {lang && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${langBadgeStyles[lang]}`}>
+                          {lang}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-t-muted text-[12px]">
+                      {result.setCode || '—'}
                     </td>
                     <td className="px-5 py-3.5 text-right text-t-body">{result.quantity}</td>
                     <td className="px-5 py-3.5 text-right text-t-body">¥{result.price!.toLocaleString()}</td>
@@ -77,7 +103,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
             </tbody>
             <tfoot>
               <tr className="border-t border-divider dark:bg-white/[0.02] bg-muted-surface/30">
-                <td colSpan={4} className="px-5 py-4 text-right font-semibold text-t-strong text-title-sm">
+                <td colSpan={6} className="px-5 py-4 text-right font-semibold text-t-strong text-title-sm">
                   Grand Total
                 </td>
                 <td className="px-5 py-4 text-right font-bold text-metric-sm text-[var(--accent-success)]">

@@ -6,6 +6,7 @@ export interface ParsedCard {
   foilType: FoilType;
   quantity: number;
   rawLine: string;
+  lang?: CardLanguage;
 }
 
 export interface CardSearchResult {
