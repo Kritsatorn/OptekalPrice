@@ -1,101 +1,135 @@
-import Image from "next/image";
+'use client';
+
+import { useCardSearch } from '@/hooks/useCardSearch';
+import { useTheme } from '@/hooks/useTheme';
+import CardInput from '@/components/CardInput';
+import BuyerInfo from '@/components/BuyerInfo';
+import CardResult from '@/components/CardResult';
+import ResultsTable from '@/components/ResultsTable';
+import ExportButton from '@/components/ExportButton';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const {
+    input,
+    setInput,
+    buyerName,
+    setBuyerName,
+    results,
+    parseErrors,
+    isSearching,
+    progress,
+    search,
+    clearResults,
+  } = useCardSearch();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const { theme, toggle, mounted } = useTheme();
+
+  return (
+    <div className="min-h-screen bg-page p-4 sm:p-6 md:p-8 lg:p-10">
+      <div className="max-w-[1120px] mx-auto">
+        {/* Header */}
+        <div className="mb-6 md:mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-[28px] font-bold text-t-strong tracking-tight">
+              CardCrew
+            </h1>
+            <p className="text-[13px] text-t-muted mt-1">Search Flesh and Blood cards on Girafull</p>
+          </div>
+
+          {/* Theme toggle */}
+          {mounted && (
+            <button
+              onClick={toggle}
+              className="glass-card p-2.5 rounded-full shadow-card hover:shadow-card-hover transition-all"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <svg className="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Main Panel */}
+        <div className="glass-panel rounded-panel bg-panel p-4 sm:p-5 md:p-6 lg:p-7">
+          {/* Input Section */}
+          <div className="glass-card shimmer-border rounded-card bg-card shadow-card p-card-p space-y-4 mb-5">
+            <BuyerInfo value={buyerName} onChange={setBuyerName} />
+            <CardInput
+              value={input}
+              onChange={setInput}
+              errors={parseErrors}
+              disabled={isSearching}
+            />
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                onClick={search}
+                disabled={isSearching || !input.trim()}
+                className="px-6 py-2.5 rounded-full bg-[var(--accent-success)] hover:brightness-110 disabled:bg-muted-surface disabled:text-t-muted text-white text-[13px] font-semibold shadow-button hover:shadow-lg transition-all active:translate-y-px disabled:shadow-none disabled:hover:brightness-100"
+              >
+                {isSearching ? 'Searching...' : 'Search'}
+              </button>
+
+              {results.length > 0 && (
+                <button
+                  onClick={clearResults}
+                  className="px-4 py-2.5 rounded-full border border-divider text-t-muted hover:text-t-strong hover:border-t-muted text-[13px] font-medium transition-all"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Loading Progress */}
+          {isSearching && (
+            <div className="glass-card rounded-card bg-card shadow-card p-card-p mb-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 border-2 border-[var(--primary-400)] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[13px] text-t-body">
+                  Searching cards... {progress.current}/{progress.total}
+                </span>
+              </div>
+              <div className="w-full bg-muted-surface rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: progress.total > 0 ? `${(progress.current / progress.total) * 100}%` : '0%' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Results */}
+          {results.length > 0 && (
+            <div className="space-y-5">
+              {/* Card Grid */}
+              <div className="space-y-4">
+                <h2 className="text-title-md font-semibold text-t-strong">Results</h2>
+                <div className="grid gap-4 md:gap-[18px] lg:gap-grid-gap grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  {results.map((result, i) => (
+                    <CardResult key={i} result={result} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary Table */}
+              <ResultsTable results={results} />
+
+              {/* Export */}
+              <div className="flex justify-end pt-1">
+                <ExportButton results={results} buyerName={buyerName} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
