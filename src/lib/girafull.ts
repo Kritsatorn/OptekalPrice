@@ -125,7 +125,7 @@ async function searchCardForLang(card: ParsedCard, lang: CardLanguage): Promise<
 
       const { price, available } = extractNMPrice(product.variants);
       const imageUrl = product.images.length > 0 ? product.images[0].src : null;
-      const setCode = extractSetCode(product.tags);
+      const setCode = extractCardId(product.title, product.handle);
 
       return {
         cardName: card.cardName,
@@ -272,11 +272,16 @@ function extractNMPrice(variants: ProductVariant[]): { price: number | null; ava
   return { price: null, available: false };
 }
 
-function extractSetCode(tags: string[]): string | null {
-  for (const tag of tags) {
-    const match = tag.match(/^set_(.+)/i);
-    if (match) return match[1].toUpperCase();
-  }
+// Extract card identifier like "SUP256" from product title [SUP256] or handle prefix
+function extractCardId(title: string, handle: string): string | null {
+  // Try title first: e.g. "【EN】New Horizon/新たな視野 [SUP256]"
+  const titleMatch = title.match(/\[([A-Z]{2,5}\d+)\]/i);
+  if (titleMatch) return titleMatch[1].toUpperCase();
+
+  // Fallback: parse handle prefix before _foil, e.g. "sup256_foils_langen" → "SUP256"
+  const handleMatch = handle.match(/^([a-z]{2,5}\d+)/i);
+  if (handleMatch) return handleMatch[1].toUpperCase();
+
   return null;
 }
 
@@ -321,7 +326,7 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
 
       const { price, available } = extractNMPrice(product.variants);
       const imageUrl = product.images.length > 0 ? product.images[0].src : null;
-      const setCode = extractSetCode(product.tags);
+      const setCode = extractCardId(product.title, product.handle);
 
       return {
         cardName: card.cardName,

@@ -61,7 +61,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Card Name</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Foil</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Lang</th>
-                <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Set</th>
+                <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Card ID</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Qty</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Price</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Subtotal</th>

@@ -20,7 +20,7 @@ export function generateCSV(results: CardSearchResult[], buyerName: string): str
   lines.push(`Buyer: ${buyerName}`);
   lines.push(`Date: ${date}`);
   lines.push('');
-  lines.push('Card Name,Foil Type,Language,Set,Quantity,Price per Unit (JPY),Subtotal (JPY)');
+  lines.push('Card Name,Foil Type,Language,Card ID,Quantity,Price per Unit (JPY),Subtotal (JPY)');
 
   let grandTotal = 0;
 
