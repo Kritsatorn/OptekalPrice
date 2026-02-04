@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchCard } from '@/lib/girafull';
-import { SearchRequest, SearchResponse, CardSearchResult } from '@/lib/types';
+import { searchCard, searchCardDual } from '@/lib/girafull';
+import { SearchRequest, SearchResponse, DualSearchResponse, CardSearchResult, DualCardResult } from '@/lib/types';
+
 
 const MAX_CARDS = 50;
 const DELAY_MS = 300;
@@ -19,6 +20,23 @@ export async function POST(request: NextRequest) {
 
     if (body.cards.length > MAX_CARDS) {
       return NextResponse.json({ error: `Maximum ${MAX_CARDS} cards per request` }, { status: 400 });
+    }
+
+    if (body.dualLang) {
+      const results: DualCardResult[] = [];
+
+      for (let i = 0; i < body.cards.length; i++) {
+        const card = body.cards[i];
+        const result = await searchCardDual(card);
+        results.push(result);
+
+        if (i < body.cards.length - 1) {
+          await delay(DELAY_MS);
+        }
+      }
+
+      const response: DualSearchResponse = { results };
+      return NextResponse.json(response);
     }
 
     const results: CardSearchResult[] = [];

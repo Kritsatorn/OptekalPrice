@@ -1,4 +1,5 @@
 export type FoilType = 'NF' | 'RF' | 'CF' | 'EARF' | 'Marvel';
+export type CardLanguage = 'EN' | 'JP';
 
 export interface ParsedCard {
   cardName: string;
@@ -20,12 +21,25 @@ export interface CardSearchResult {
   error?: string;
 }
 
+export interface DualCardResult {
+  cardName: string;
+  foilType: FoilType;
+  quantity: number;
+  en: CardSearchResult | null;
+  jp: CardSearchResult | null;
+}
+
 export interface SearchRequest {
   cards: ParsedCard[];
+  dualLang?: boolean;
 }
 
 export interface SearchResponse {
   results: CardSearchResult[];
+}
+
+export interface DualSearchResponse {
+  results: DualCardResult[];
 }
 
 export interface ParseError {

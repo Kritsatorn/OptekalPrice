@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <!-- Card shape -->
+  <rect x="20" y="8" width="88" height="112" rx="12" fill="url(#g)"/>
+  <!-- Inner border -->
+  <rect x="28" y="16" width="72" height="96" rx="8" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+  <!-- Star/sparkle top-left -->
+  <path d="M44 36 l3 6 6 3 -6 3 -3 6 -3-6 -6-3 6-3z" fill="#fbbf24"/>
+  <!-- Star/sparkle bottom-right -->
+  <path d="M84 82 l3 6 6 3 -6 3 -3 6 -3-6 -6-3 6-3z" fill="#fbbf24"/>
+  <!-- Center diamond -->
+  <path d="M64 44 l14 20 -14 20 -14-20z" fill="rgba(255,255,255,0.9)"/>
+</svg>

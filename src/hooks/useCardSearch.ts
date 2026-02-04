@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { CardSearchResult } from '@/lib/types';
+import { useState, useCallback, useEffect } from 'react';
+import { CardSearchResult, CardLanguage, DualCardResult } from '@/lib/types';
 import { parseCardList, ParseResult } from '@/lib/parseCardList';
 
 interface UseCardSearchReturn {
@@ -15,6 +15,13 @@ interface UseCardSearchReturn {
   progress: { current: number; total: number };
   search: () => Promise<void>;
   clearResults: () => void;
+  dualLang: boolean;
+  setDualLang: (value: boolean) => void;
+  dualResults: DualCardResult[];
+  selections: Map<number, CardLanguage>;
+  selectLanguage: (index: number, lang: CardLanguage) => void;
+  confirmSelections: () => void;
+  isPickerMode: boolean;
 }
 
 export function useCardSearch(): UseCardSearchReturn {
@@ -25,6 +32,67 @@ export function useCardSearch(): UseCardSearchReturn {
   const [isSearching, setIsSearching] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
+  // Dual language state
+  const [dualLang, setDualLangState] = useState(false);
+  const [dualResults, setDualResults] = useState<DualCardResult[]>([]);
+  const [selections, setSelections] = useState<Map<number, CardLanguage>>(new Map());
+  const [pickerConfirmed, setPickerConfirmed] = useState(false);
+
+  // Load dualLang preference from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('cardcrew-dual-lang');
+      if (stored === 'true') setDualLangState(true);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const setDualLang = useCallback((value: boolean) => {
+    setDualLangState(value);
+    try {
+      localStorage.setItem('cardcrew-dual-lang', String(value));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const isPickerMode = dualLang && dualResults.length > 0 && !pickerConfirmed;
+
+  const selectLanguage = useCallback((index: number, lang: CardLanguage) => {
+    setSelections(prev => {
+      const next = new Map(prev);
+      next.set(index, lang);
+      return next;
+    });
+  }, []);
+
+  const confirmSelections = useCallback(() => {
+    const confirmed: CardSearchResult[] = dualResults.map((dual, i) => {
+      const lang = selections.get(i);
+      const chosen = lang === 'JP' ? dual.jp : dual.en;
+
+      if (chosen) return chosen;
+
+      // Fallback: return a not-found result
+      return {
+        cardName: dual.cardName,
+        foilType: dual.foilType,
+        quantity: dual.quantity,
+        productTitle: '',
+        price: null,
+        imageUrl: null,
+        available: false,
+        productUrl: '',
+        setCode: null,
+        error: 'No version selected or found',
+      };
+    });
+
+    setResults(confirmed);
+    setPickerConfirmed(true);
+  }, [dualResults, selections]);
+
   const search = useCallback(async () => {
     const parsed = parseCardList(input);
     setParseErrors(parsed.errors);
@@ -33,13 +101,16 @@ export function useCardSearch(): UseCardSearchReturn {
 
     setIsSearching(true);
     setResults([]);
+    setDualResults([]);
+    setSelections(new Map());
+    setPickerConfirmed(false);
     setProgress({ current: 0, total: parsed.cards.length });
 
     try {
       const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cards: parsed.cards }),
+        body: JSON.stringify({ cards: parsed.cards, dualLang }),
       });
 
       if (!res.ok) {
@@ -48,11 +119,25 @@ export function useCardSearch(): UseCardSearchReturn {
       }
 
       const data = await res.json();
-      setResults(data.results);
+
+      if (dualLang) {
+        const dualData: DualCardResult[] = data.results;
+        setDualResults(dualData);
+
+        // Auto-select cards where only one language is available
+        const autoSelections = new Map<number, CardLanguage>();
+        dualData.forEach((dual, i) => {
+          if (dual.en && !dual.jp) autoSelections.set(i, 'EN');
+          else if (!dual.en && dual.jp) autoSelections.set(i, 'JP');
+        });
+        setSelections(autoSelections);
+      } else {
+        setResults(data.results);
+      }
+
       setProgress({ current: parsed.cards.length, total: parsed.cards.length });
     } catch (err) {
       console.error('Search error:', err);
-      // Create error results for all cards
       const errorResults: CardSearchResult[] = parsed.cards.map(card => ({
         cardName: card.cardName,
         foilType: card.foilType,
@@ -69,10 +154,13 @@ export function useCardSearch(): UseCardSearchReturn {
     } finally {
       setIsSearching(false);
     }
-  }, [input]);
+  }, [input, dualLang]);
 
   const clearResults = useCallback(() => {
     setResults([]);
+    setDualResults([]);
+    setSelections(new Map());
+    setPickerConfirmed(false);
     setParseErrors([]);
     setProgress({ current: 0, total: 0 });
   }, []);
@@ -88,5 +176,12 @@ export function useCardSearch(): UseCardSearchReturn {
     progress,
     search,
     clearResults,
+    dualLang,
+    setDualLang,
+    dualResults,
+    selections,
+    selectLanguage,
+    confirmSelections,
+    isPickerMode,
   };
 }

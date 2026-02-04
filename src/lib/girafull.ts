@@ -1,11 +1,9 @@
-import * as cheerio from 'cheerio';
-import { FoilType, ParsedCard, CardSearchResult } from './types';
+import { FoilType, ParsedCard, CardSearchResult, CardLanguage, DualCardResult } from './types';
 
 const BASE_URL = 'https://ec.girafull.co.jp';
 
 interface ProductHandle {
   handle: string;
-  title: string;
 }
 
 interface ProductVariant {
@@ -25,7 +23,7 @@ interface ProductJSON {
   };
 }
 
-// Phase 1: Search Girafull for product handles
+// Phase 1: Search Girafull for product handles (regex-based, no cheerio)
 async function searchProducts(cardName: string): Promise<ProductHandle[]> {
   const query = encodeURIComponent(`【EN】${cardName}`);
   const url = `${BASE_URL}/search?type=product&q=${query}`;
@@ -42,195 +40,89 @@ async function searchProducts(cardName: string): Promise<ProductHandle[]> {
   }
 
   const html = await res.text();
-  const $ = cheerio.load(html);
   const handles: ProductHandle[] = [];
+  const seen = new Set<string>();
 
-  // Extract product links from search results
-  $('a[href*="/products/"]').each((_, el) => {
-    const href = $(el).attr('href');
-    if (href) {
-      const match = href.match(/\/products\/([^?#]+)/);
-      if (match) {
-        const handle = match[1];
-        const title = $(el).text().trim() || handle;
-        // Avoid duplicates
-        if (!handles.find(h => h.handle === handle)) {
-          handles.push({ handle, title });
-        }
-      }
+  // Extract all /products/{handle} links from HTML
+  const regex = /href=["']\/products\/([^"'?#]+)/g;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    const handle = match[1];
+    if (!seen.has(handle)) {
+      seen.add(handle);
+      handles.push({ handle });
     }
-  });
+  }
 
   return handles;
 }
 
-// Phase 2: Fetch product JSON
-async function fetchProductJSON(handle: string): Promise<ProductJSON | null> {
-  const url = `${BASE_URL}/products/${handle}.json`;
+// Check if a product handle matches a language
+function matchesLanguage(handle: string, lang: CardLanguage): boolean {
+  const h = handle.toLowerCase();
+  const hasEN = h.includes('_langen');
+  const hasJP = h.includes('_langjp');
+
+  if (!hasEN && !hasJP) return true; // No language suffix = matches both
+  if (lang === 'EN') return hasEN;
+  return hasJP;
+}
+
+// Search products with language-specific query
+async function searchProductsForLang(cardName: string, lang: CardLanguage): Promise<ProductHandle[]> {
+  const queryStr = lang === 'EN' ? `【EN】${cardName}` : `【JP】${cardName}`;
+  const query = encodeURIComponent(queryStr);
+  const url = `${BASE_URL}/search?type=product&q=${query}`;
 
   const res = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (compatible; CardCrew/1.0)',
-      'Accept': 'application/json',
+      'Accept': 'text/html',
     },
   });
 
-  if (!res.ok) return null;
-
-  try {
-    return await res.json();
-  } catch {
-    return null;
+  if (!res.ok) {
+    throw new Error(`Search failed: ${res.status}`);
   }
-}
 
-// Check if a product handle matches the foil type
-function matchesFoilType(handle: string, title: string, tags: string[], foilType: FoilType): boolean {
-  const h = handle.toLowerCase();
-  const t = title;
+  const html = await res.text();
+  const handles: ProductHandle[] = [];
+  const seen = new Set<string>();
 
-  switch (foilType) {
-    case 'NF':
-      // Non-foil: handle contains _foils_ (standard), no RF/CF prefix in title
-      return h.includes('_foils_') && !t.includes('〈RF〉') && !t.includes('〈CF〉');
-    case 'RF':
-      // Rainbow foil: handle contains _foilr_, title has 〈RF〉, but NOT Extended Art
-      return (h.includes('_foilr_') && t.includes('〈RF〉') && !t.toLowerCase().includes('extended art'));
-    case 'CF':
-      // Cold foil: handle contains _foilc_, title has 〈CF〉
-      return h.includes('_foilc_') && t.includes('〈CF〉');
-    case 'EARF':
-      // Extended Art Rainbow Foil: has _foilr_ and _artea_ or Extended Art in title
-      return (h.includes('_foilr_') && (h.includes('_artea_') || t.toLowerCase().includes('extended art')) && t.includes('〈RF〉'));
-    case 'Marvel':
-      // Marvel: identified by rarity_V tag
-      return tags.some(tag => tag.toLowerCase().includes('rarity_v'));
-    default:
-      return false;
-  }
-}
-
-// Extract the English card name from a product title
-function extractEnglishName(title: string): string {
-  // Remove 【EN】 prefix
-  let name = title.replace(/【EN】/g, '');
-  // Remove foil prefixes
-  name = name.replace(/〈[A-Z]+〉\s*/g, '');
-  // Remove Extended Art prefix
-  name = name.replace(/Extended Art\s*/i, '');
-  // Take text before "/" separator (English name before Japanese)
-  const slashIndex = name.indexOf('/');
-  if (slashIndex !== -1) {
-    name = name.substring(0, slashIndex);
-  }
-  return name.trim();
-}
-
-// Normalize color in card name for matching: "Red" -> "(Red)"
-function normalizeForMatch(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
-// Check if the product title matches the user's card name
-function matchesCardName(productTitle: string, userCardName: string): boolean {
-  const productName = normalizeForMatch(extractEnglishName(productTitle));
-  const userNormalized = normalizeForMatch(userCardName);
-
-  // Direct substring match
-  if (productName.includes(userNormalized)) return true;
-
-  // Handle color in parentheses: user types "Take the Bait Red", title has "Take the Bait (Red)"
-  // Try converting "Name Color" -> "Name (Color)"
-  const colors = ['red', 'yellow', 'blue'];
-  for (const color of colors) {
-    if (userNormalized.endsWith(` ${color}`)) {
-      const baseName = userNormalized.slice(0, -(color.length + 1));
-      const withParens = `${baseName} (${color})`;
-      if (productName.includes(withParens)) return true;
+  const regex = /href=["']\/products\/([^"'?#]+)/g;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    const handle = match[1];
+    if (!seen.has(handle)) {
+      seen.add(handle);
+      handles.push({ handle });
     }
   }
 
-  return false;
+  return handles;
 }
 
-// Extract NM price from variants
-// Girafull sets price to 0 for sold-out grades; available field may not exist in JSON
-function extractNMPrice(variants: ProductVariant[]): { price: number | null; available: boolean } {
-  // Look for NM or Near Mint variant
-  const nmVariant = variants.find(v => {
-    const t = v.title.toLowerCase();
-    return t.includes('nm') || t.includes('near mint');
-  });
-
-  if (nmVariant) {
-    const price = parseInt(nmVariant.price, 10);
-    return {
-      price,
-      available: nmVariant.available ?? price > 0,
-    };
-  }
-
-  // If no NM-specific variant, use the first variant
-  if (variants.length > 0) {
-    const price = parseInt(variants[0].price, 10);
-    return {
-      price,
-      available: variants[0].available ?? price > 0,
-    };
-  }
-
-  return { price: null, available: false };
-}
-
-// Extract set code from tags
-function extractSetCode(tags: string[]): string | null {
-  for (const tag of tags) {
-    // Set codes look like: set_XXX
-    const match = tag.match(/^set_(.+)/i);
-    if (match) return match[1].toUpperCase();
-  }
-  return null;
-}
-
-// Main search function for a single card
-export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
+// Search for a card in a specific language
+async function searchCardForLang(card: ParsedCard, lang: CardLanguage): Promise<CardSearchResult | null> {
   try {
-    // Phase 1: Search for products
-    const handles = await searchProducts(card.cardName);
+    const handles = await searchProductsForLang(card.cardName, lang);
 
-    if (handles.length === 0) {
-      return {
-        cardName: card.cardName,
-        foilType: card.foilType,
-        quantity: card.quantity,
-        productTitle: '',
-        price: null,
-        imageUrl: null,
-        available: false,
-        productUrl: '',
-        setCode: null,
-        error: 'No results found',
-      };
-    }
-
-    // Phase 2: Check each product for foil type and name match
     for (const handle of handles) {
+      if (!matchesLanguage(handle.handle, lang)) continue;
+
       const productData = await fetchProductJSON(handle.handle);
       if (!productData) continue;
 
       const product = productData.product;
 
-      // Check foil type match
       if (!matchesFoilType(product.handle, product.title, product.tags, card.foilType)) {
         continue;
       }
 
-      // Check card name match
       if (!matchesCardName(product.title, card.cardName)) {
         continue;
       }
 
-      // Found a match
       const { price, available } = extractNMPrice(product.variants);
       const imageUrl = product.images.length > 0 ? product.images[0].src : null;
       const setCode = extractSetCode(product.tags);
@@ -248,7 +140,197 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
       };
     }
 
-    // No matching product found
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Search for both EN and JP versions of a card
+export async function searchCardDual(card: ParsedCard): Promise<DualCardResult> {
+  const [en, jp] = await Promise.all([
+    searchCardForLang(card, 'EN'),
+    searchCardForLang(card, 'JP'),
+  ]);
+
+  return {
+    cardName: card.cardName,
+    foilType: card.foilType,
+    quantity: card.quantity,
+    en,
+    jp,
+  };
+}
+
+// Phase 2: Fetch product JSON
+async function fetchProductJSON(handle: string): Promise<ProductJSON | null> {
+  const url = `${BASE_URL}/products/${handle}.json`;
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; CardCrew/1.0)',
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!res.ok) return null;
+
+  try {
+    return await res.json() as ProductJSON;
+  } catch {
+    return null;
+  }
+}
+
+// Check if a product handle matches the foil type
+function matchesFoilType(handle: string, title: string, tags: string[], foilType: FoilType): boolean {
+  const h = handle.toLowerCase();
+  const t = title;
+
+  switch (foilType) {
+    case 'NF':
+      return h.includes('_foils_') && !t.includes('〈RF〉') && !t.includes('〈CF〉');
+    case 'RF':
+      return (h.includes('_foilr_') && t.includes('〈RF〉') && !t.toLowerCase().includes('extended art'));
+    case 'CF':
+      return h.includes('_foilc_') && t.includes('〈CF〉');
+    case 'EARF':
+      return (h.includes('_foilr_') && (h.includes('_artea_') || t.toLowerCase().includes('extended art')) && t.includes('〈RF〉'));
+    case 'Marvel':
+      return tags.some(tag => tag.toLowerCase().includes('rarity_v'));
+    default:
+      return false;
+  }
+}
+
+// Extract the English card name from a product title
+function extractEnglishName(title: string): string {
+  let name = title.replace(/【EN】/g, '');
+  name = name.replace(/〈[A-Z]+〉\s*/g, '');
+  name = name.replace(/Extended Art\s*/i, '');
+  const slashIndex = name.indexOf('/');
+  if (slashIndex !== -1) {
+    name = name.substring(0, slashIndex);
+  }
+  return name.trim();
+}
+
+function normalizeForMatch(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function matchesCardName(productTitle: string, userCardName: string): boolean {
+  const productName = normalizeForMatch(extractEnglishName(productTitle));
+  const fullTitle = normalizeForMatch(productTitle);
+  const userNormalized = normalizeForMatch(userCardName);
+
+  // Direct match against English name
+  if (productName.includes(userNormalized)) return true;
+
+  // Direct match against full title (covers JP titles where English name is after /)
+  if (fullTitle.includes(userNormalized)) return true;
+
+  // Handle color: user types "Take the Bait Red"
+  // Title may have color as "(Red)" anywhere in the full title
+  const colors = ['red', 'yellow', 'blue'];
+  for (const color of colors) {
+    if (userNormalized.endsWith(` ${color}`)) {
+      const baseName = userNormalized.slice(0, -(color.length + 1));
+      if ((productName.includes(baseName) || fullTitle.includes(baseName)) && fullTitle.includes(`(${color})`)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// Extract NM price from variants
+// Girafull sets price to 0 for sold-out grades; available field may not exist in JSON
+function extractNMPrice(variants: ProductVariant[]): { price: number | null; available: boolean } {
+  const nmVariant = variants.find(v => {
+    const t = v.title.toLowerCase();
+    return t.includes('nm') || t.includes('near mint');
+  });
+
+  if (nmVariant) {
+    const price = parseInt(nmVariant.price, 10);
+    return {
+      price,
+      available: nmVariant.available ?? price > 0,
+    };
+  }
+
+  if (variants.length > 0) {
+    const price = parseInt(variants[0].price, 10);
+    return {
+      price,
+      available: variants[0].available ?? price > 0,
+    };
+  }
+
+  return { price: null, available: false };
+}
+
+function extractSetCode(tags: string[]): string | null {
+  for (const tag of tags) {
+    const match = tag.match(/^set_(.+)/i);
+    if (match) return match[1].toUpperCase();
+  }
+  return null;
+}
+
+// Main search function for a single card
+export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
+  try {
+    const handles = await searchProducts(card.cardName);
+
+    if (handles.length === 0) {
+      return {
+        cardName: card.cardName,
+        foilType: card.foilType,
+        quantity: card.quantity,
+        productTitle: '',
+        price: null,
+        imageUrl: null,
+        available: false,
+        productUrl: '',
+        setCode: null,
+        error: 'No results found',
+      };
+    }
+
+    for (const handle of handles) {
+      const productData = await fetchProductJSON(handle.handle);
+      if (!productData) continue;
+
+      const product = productData.product;
+
+      if (!matchesFoilType(product.handle, product.title, product.tags, card.foilType)) {
+        continue;
+      }
+
+      if (!matchesCardName(product.title, card.cardName)) {
+        continue;
+      }
+
+      const { price, available } = extractNMPrice(product.variants);
+      const imageUrl = product.images.length > 0 ? product.images[0].src : null;
+      const setCode = extractSetCode(product.tags);
+
+      return {
+        cardName: card.cardName,
+        foilType: card.foilType,
+        quantity: card.quantity,
+        productTitle: product.title,
+        price,
+        imageUrl,
+        available,
+        productUrl: `${BASE_URL}/products/${product.handle}`,
+        setCode,
+      };
+    }
+
     return {
       cardName: card.cardName,
       foilType: card.foilType,

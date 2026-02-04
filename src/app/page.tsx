@@ -7,6 +7,8 @@ import BuyerInfo from '@/components/BuyerInfo';
 import CardResult from '@/components/CardResult';
 import ResultsTable from '@/components/ResultsTable';
 import ExportButton from '@/components/ExportButton';
+import DualLangToggle from '@/components/DualLangToggle';
+import LanguagePicker from '@/components/LanguagePicker';
 
 export default function Home() {
   const {
@@ -20,6 +22,13 @@ export default function Home() {
     progress,
     search,
     clearResults,
+    dualLang,
+    setDualLang,
+    dualResults,
+    selections,
+    selectLanguage,
+    confirmSelections,
+    isPickerMode,
   } = useCardSearch();
 
   const { theme, toggle, mounted } = useTheme();
@@ -77,7 +86,7 @@ export default function Home() {
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
 
-              {results.length > 0 && (
+              {(results.length > 0 || dualResults.length > 0) && (
                 <button
                   onClick={clearResults}
                   className="px-4 py-2.5 rounded-full border border-divider text-t-muted hover:text-t-strong hover:border-t-muted text-[13px] font-medium transition-all"
@@ -85,6 +94,10 @@ export default function Home() {
                   Clear
                 </button>
               )}
+
+              <div className="ml-auto">
+                <DualLangToggle enabled={dualLang} onChange={setDualLang} />
+              </div>
             </div>
           </div>
 
@@ -106,8 +119,18 @@ export default function Home() {
             </div>
           )}
 
+          {/* Language Picker */}
+          {isPickerMode && (
+            <LanguagePicker
+              dualResults={dualResults}
+              selections={selections}
+              onSelect={selectLanguage}
+              onConfirm={confirmSelections}
+            />
+          )}
+
           {/* Results */}
-          {results.length > 0 && (
+          {!isPickerMode && results.length > 0 && (
             <div className="space-y-5">
               {/* Card Grid */}
               <div className="space-y-4">
