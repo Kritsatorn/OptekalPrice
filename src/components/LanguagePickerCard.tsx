@@ -117,6 +117,36 @@ function LangOption({
               </svg>
             </a>
           )}
+
+          {/* Alternatives */}
+          {result.alternatives && result.alternatives.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-divider">
+              <p className="text-[10px] font-medium text-t-muted uppercase tracking-wider mb-1">Also available</p>
+              <div className="flex flex-wrap gap-1">
+                {result.alternatives.map((alt, i) => (
+                  <a
+                    key={i}
+                    href={alt.productUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted-surface/50 dark:bg-white/[0.04] hover:bg-muted-surface dark:hover:bg-white/[0.08] transition-colors"
+                  >
+                    <span className={`inline-flex items-center px-1 py-px rounded-full text-[9px] font-bold tracking-wide ${foilBadgeStyles[alt.foilType]}`}>
+                      {alt.foilType}
+                    </span>
+                    {alt.setCode && (
+                      <span className="text-[9px] text-t-muted">{alt.setCode}</span>
+                    )}
+                    {alt.price !== null && (
+                      <span className="text-[10px] text-t-body font-medium">¥{alt.price.toLocaleString()}</span>
+                    )}
+                    <span className={`w-1 h-1 rounded-full inline-block ${alt.available ? 'bg-[var(--accent-success)]' : 'bg-[var(--accent-danger)]'}`} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="w-full aspect-[3/4] rounded-[8px] bg-muted-surface dark:bg-white/5 flex items-center justify-center mb-2">

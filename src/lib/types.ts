@@ -9,6 +9,15 @@ export interface ParsedCard {
   lang?: CardLanguage;
 }
 
+export interface CardAlternative {
+  foilType: FoilType;
+  language: CardLanguage | '';
+  price: number | null;
+  available: boolean;
+  productUrl: string;
+  setCode: string | null;
+}
+
 export interface CardSearchResult {
   cardName: string;
   foilType: FoilType;
@@ -20,6 +29,7 @@ export interface CardSearchResult {
   productUrl: string;
   setCode: string | null;
   error?: string;
+  alternatives?: CardAlternative[];
 }
 
 export interface DualCardResult {

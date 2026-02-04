@@ -129,6 +129,38 @@ export default function CardResult({ result }: CardResultProps) {
             </svg>
           </a>
         )}
+
+        {/* Alternatives */}
+        {result.alternatives && result.alternatives.length > 0 && (
+          <div className="mt-2.5 pt-2 border-t border-divider">
+            <p className="text-kicker font-medium text-t-muted uppercase tracking-wider mb-1.5">Also available</p>
+            <div className="flex flex-wrap gap-1.5">
+              {result.alternatives.map((alt, i) => {
+                const altBadge = foilBadgeStyles[alt.foilType];
+                return (
+                  <a
+                    key={i}
+                    href={alt.productUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted-surface/50 dark:bg-white/[0.04] hover:bg-muted-surface dark:hover:bg-white/[0.08] transition-colors"
+                  >
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${altBadge.base}`}>
+                      {alt.foilType}
+                    </span>
+                    {alt.setCode && (
+                      <span className="text-[10px] text-t-muted">{alt.setCode}</span>
+                    )}
+                    {alt.price !== null && (
+                      <span className="text-[11px] text-t-body font-medium">¥{alt.price.toLocaleString()}</span>
+                    )}
+                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${alt.available ? 'bg-[var(--accent-success)]' : 'bg-[var(--accent-danger)]'}`} />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

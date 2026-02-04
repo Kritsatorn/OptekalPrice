@@ -1,4 +1,4 @@
-import { FoilType, ParsedCard, CardSearchResult, CardLanguage, DualCardResult } from './types';
+import { FoilType, ParsedCard, CardSearchResult, CardLanguage, CardAlternative, DualCardResult } from './types';
 
 const BASE_URL = 'https://ec.girafull.co.jp';
 
@@ -100,39 +100,78 @@ async function searchProductsForLang(cardName: string, lang: CardLanguage): Prom
   return handles;
 }
 
-// Search for a card in a specific language
+// Search for a card in a specific language, collecting alternatives
 async function searchCardForLang(card: ParsedCard, lang: CardLanguage): Promise<CardSearchResult | null> {
   try {
     const handles = await searchProductsForLang(card.cardName, lang);
+    const langHandles = handles.filter(h => matchesLanguage(h.handle, lang));
 
-    for (const handle of handles) {
-      if (!matchesLanguage(handle.handle, lang)) continue;
+    if (langHandles.length === 0) return null;
 
-      const product = await fetchProductJS(handle.handle);
+    // Fetch all matching products concurrently
+    const products = await Promise.all(
+      langHandles.map(async h => {
+        const product = await fetchProductJS(h.handle);
+        return product;
+      }),
+    );
+
+    let primaryResult: CardSearchResult | null = null;
+    const alternatives: CardAlternative[] = [];
+
+    for (const product of products) {
       if (!product) continue;
+      if (!matchesCardName(product.title, card.cardName)) continue;
 
-      if (!matchesFoilType(product.handle, product.title, product.tags, card.foilType)) {
-        continue;
-      }
-
-      if (!matchesCardName(product.title, card.cardName)) {
-        continue;
-      }
+      const detectedFoil = detectFoilType(product.handle, product.title, product.tags);
+      if (!detectedFoil) continue;
 
       const { price, available } = extractNMPrice(product.variants);
-      const imageUrl = product.images.length > 0 ? product.images[0] : null;
       const setCode = extractCardId(product.title, product.handle);
 
+      if (detectedFoil === card.foilType && !primaryResult) {
+        primaryResult = {
+          cardName: card.cardName,
+          foilType: card.foilType,
+          quantity: card.quantity,
+          productTitle: product.title,
+          price,
+          imageUrl: product.images.length > 0 ? product.images[0] : null,
+          available,
+          productUrl: `${BASE_URL}/products/${product.handle}`,
+          setCode,
+        };
+      } else {
+        alternatives.push({
+          foilType: detectedFoil,
+          language: detectLanguageFromHandle(product.handle),
+          price,
+          available,
+          productUrl: `${BASE_URL}/products/${product.handle}`,
+          setCode,
+        });
+      }
+    }
+
+    if (primaryResult) {
+      if (alternatives.length > 0) primaryResult.alternatives = alternatives;
+      return primaryResult;
+    }
+
+    // No exact foil match but alternatives exist — return error with alternatives
+    if (alternatives.length > 0) {
       return {
         cardName: card.cardName,
         foilType: card.foilType,
         quantity: card.quantity,
-        productTitle: product.title,
-        price,
-        imageUrl,
-        available,
-        productUrl: `${BASE_URL}/products/${product.handle}`,
-        setCode,
+        productTitle: '',
+        price: null,
+        imageUrl: null,
+        available: false,
+        productUrl: '',
+        setCode: null,
+        error: `No ${card.foilType} version found`,
+        alternatives,
       };
     }
 
@@ -197,6 +236,29 @@ function matchesFoilType(handle: string, title: string, tags: string[], foilType
     default:
       return false;
   }
+}
+
+// Detect foil type from product data (reverse of matchesFoilType)
+function detectFoilType(handle: string, title: string, tags: string[]): FoilType | null {
+  const h = handle.toLowerCase();
+  const t = title;
+  const tl = title.toLowerCase();
+
+  if (tags.some(tag => tag.toLowerCase().includes('rarity_v'))) return 'Marvel';
+  if (h.includes('_foilr_') && (h.includes('_artea_') || tl.includes('extended art')) && t.includes('〈RF〉')) return 'EARF';
+  if (h.includes('_foilr_') && t.includes('〈RF〉')) return 'RF';
+  if (h.includes('_foilc_') && t.includes('〈CF〉')) return 'CF';
+  if (h.includes('_foils_') && !t.includes('〈RF〉') && !t.includes('〈CF〉')) return 'NF';
+
+  return null;
+}
+
+// Detect language from product handle
+function detectLanguageFromHandle(handle: string): CardLanguage | '' {
+  const h = handle.toLowerCase();
+  if (h.includes('_langen')) return 'EN';
+  if (h.includes('_langjp')) return 'JP';
+  return '';
 }
 
 // Extract the English card name from a product title
@@ -302,35 +364,56 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
       };
     }
 
-    for (const handle of handles) {
-      if (!matchesLanguage(handle.handle, lang)) continue;
+    const langHandles = handles.filter(h => matchesLanguage(h.handle, lang));
 
-      const product = await fetchProductJS(handle.handle);
+    // Fetch all matching products concurrently
+    const products = await Promise.all(
+      langHandles.map(async h => {
+        const product = await fetchProductJS(h.handle);
+        return product;
+      }),
+    );
+
+    let primaryResult: CardSearchResult | null = null;
+    const alternatives: CardAlternative[] = [];
+
+    for (const product of products) {
       if (!product) continue;
+      if (!matchesCardName(product.title, card.cardName)) continue;
 
-      if (!matchesFoilType(product.handle, product.title, product.tags, card.foilType)) {
-        continue;
-      }
-
-      if (!matchesCardName(product.title, card.cardName)) {
-        continue;
-      }
+      const detectedFoil = detectFoilType(product.handle, product.title, product.tags);
+      if (!detectedFoil) continue;
 
       const { price, available } = extractNMPrice(product.variants);
-      const imageUrl = product.images.length > 0 ? product.images[0] : null;
       const setCode = extractCardId(product.title, product.handle);
 
-      return {
-        cardName: card.cardName,
-        foilType: card.foilType,
-        quantity: card.quantity,
-        productTitle: product.title,
-        price,
-        imageUrl,
-        available,
-        productUrl: `${BASE_URL}/products/${product.handle}`,
-        setCode,
-      };
+      if (detectedFoil === card.foilType && !primaryResult) {
+        primaryResult = {
+          cardName: card.cardName,
+          foilType: card.foilType,
+          quantity: card.quantity,
+          productTitle: product.title,
+          price,
+          imageUrl: product.images.length > 0 ? product.images[0] : null,
+          available,
+          productUrl: `${BASE_URL}/products/${product.handle}`,
+          setCode,
+        };
+      } else {
+        alternatives.push({
+          foilType: detectedFoil,
+          language: detectLanguageFromHandle(product.handle),
+          price,
+          available,
+          productUrl: `${BASE_URL}/products/${product.handle}`,
+          setCode,
+        });
+      }
+    }
+
+    if (primaryResult) {
+      if (alternatives.length > 0) primaryResult.alternatives = alternatives;
+      return primaryResult;
     }
 
     return {
@@ -344,6 +427,7 @@ export async function searchCard(card: ParsedCard): Promise<CardSearchResult> {
       productUrl: '',
       setCode: null,
       error: `No ${card.foilType} version found`,
+      alternatives: alternatives.length > 0 ? alternatives : undefined,
     };
   } catch (err) {
     return {
