@@ -199,14 +199,14 @@ export default function LanguagePickerCard({
           lang="EN"
           result={en}
           isSelected={selected === 'EN'}
-          isDisabled={!en || !!en.error}
+          isDisabled={!en || !!en.error || !en.available}
           onClick={() => onSelect('EN')}
         />
         <LangOption
           lang="JP"
           result={jp}
           isSelected={selected === 'JP'}
-          isDisabled={!jp || !!jp.error}
+          isDisabled={!jp || !!jp.error || !jp.available}
           onClick={() => onSelect('JP')}
         />
       </div>

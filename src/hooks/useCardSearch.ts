@@ -158,11 +158,24 @@ export function useCardSearch(): UseCardSearchReturn {
         const dualData: DualCardResult[] = data.results;
         setDualResults(dualData);
 
-        // Auto-select cards where only one language is available
+        // Auto-select based on availability and stock
         const autoSelections = new Map<number, CardLanguage>();
         dualData.forEach((dual, i) => {
-          if (dual.en && !dual.jp) autoSelections.set(i, 'EN');
-          else if (!dual.en && dual.jp) autoSelections.set(i, 'JP');
+          const enOk = dual.en && !dual.en.error;
+          const jpOk = dual.jp && !dual.jp.error;
+          const enInStock = enOk && dual.en!.available;
+          const jpInStock = jpOk && dual.jp!.available;
+
+          if (enInStock && !jpInStock) {
+            autoSelections.set(i, 'EN');
+          } else if (jpInStock && !enInStock) {
+            autoSelections.set(i, 'JP');
+          } else if (!enInStock && !jpInStock) {
+            // Both out of stock — auto-select the one that exists (prefer EN)
+            if (enOk) autoSelections.set(i, 'EN');
+            else if (jpOk) autoSelections.set(i, 'JP');
+          }
+          // Both in stock → let user choose
         });
         setSelections(autoSelections);
       } else {
@@ -235,8 +248,19 @@ export function useCardSearch(): UseCardSearchReturn {
 
         const autoSelections = new Map<number, CardLanguage>();
         dualData.forEach((dual, i) => {
-          if (dual.en && !dual.jp) autoSelections.set(i, 'EN');
-          else if (!dual.en && dual.jp) autoSelections.set(i, 'JP');
+          const enOk = dual.en && !dual.en.error;
+          const jpOk = dual.jp && !dual.jp.error;
+          const enInStock = enOk && dual.en!.available;
+          const jpInStock = jpOk && dual.jp!.available;
+
+          if (enInStock && !jpInStock) {
+            autoSelections.set(i, 'EN');
+          } else if (jpInStock && !enInStock) {
+            autoSelections.set(i, 'JP');
+          } else if (!enInStock && !jpInStock) {
+            if (enOk) autoSelections.set(i, 'EN');
+            else if (jpOk) autoSelections.set(i, 'JP');
+          }
         });
         setSelections(autoSelections);
       } else {

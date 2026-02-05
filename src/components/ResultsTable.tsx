@@ -93,7 +93,12 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                       {result.setCode || '—'}
                     </td>
                     <td className="px-5 py-3.5 text-right text-t-body">{result.quantity}</td>
-                    <td className="px-5 py-3.5 text-right text-t-body">¥{result.price!.toLocaleString()}</td>
+                    <td className="px-5 py-3.5 text-right text-t-body">
+                      <span className="inline-flex items-center gap-1.5">
+                        ¥{result.price!.toLocaleString()}
+                        <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${result.available ? 'bg-[var(--accent-success)]' : 'bg-[var(--accent-danger)]'}`} />
+                      </span>
+                    </td>
                     <td className="px-5 py-3.5 text-right text-t-strong font-semibold">
                       ¥{(result.price! * result.quantity).toLocaleString()}
                     </td>
