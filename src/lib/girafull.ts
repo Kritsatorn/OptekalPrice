@@ -28,7 +28,7 @@ async function searchProducts(cardName: string): Promise<ProductHandle[]> {
 
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; CardCrew/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; OptekalPrice/1.0)',
       'Accept': 'text/html',
     },
   });
@@ -74,7 +74,7 @@ async function searchProductsForLang(cardName: string, lang: CardLanguage): Prom
 
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; CardCrew/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; OptekalPrice/1.0)',
       'Accept': 'text/html',
     },
   });
@@ -203,7 +203,7 @@ async function fetchProductJS(handle: string): Promise<ProductJS | null> {
 
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; CardCrew/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; OptekalPrice/1.0)',
       'Accept': 'application/json',
     },
   });

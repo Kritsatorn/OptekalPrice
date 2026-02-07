@@ -9,7 +9,7 @@ export function useTheme() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('cardcrew-theme') as Theme | null;
+    const stored = localStorage.getItem('optekalprice-theme') as Theme | null;
     const initial = stored || 'dark';
     setThemeState(initial);
     document.documentElement.classList.toggle('dark', initial === 'dark');
@@ -18,7 +18,7 @@ export function useTheme() {
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    localStorage.setItem('cardcrew-theme', t);
+    localStorage.setItem('optekalprice-theme', t);
     document.documentElement.classList.toggle('dark', t === 'dark');
   }, []);
 

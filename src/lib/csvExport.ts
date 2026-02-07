@@ -45,7 +45,7 @@ export function generateCSV(results: CardSearchResult[], buyerName: string): str
 
 export function downloadCSV(csv: string, buyerName: string): void {
   const date = new Date().toISOString().split('T')[0];
-  const filename = `${buyerName || 'cardcrew'}_${date}.csv`;
+  const filename = `${buyerName || 'optekalprice'}_${date}.csv`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

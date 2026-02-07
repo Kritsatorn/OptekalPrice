@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CardCrew — FaB Card Search",
-  description: "Search Flesh and Blood TCG cards on Girafull and export to CSV",
+  title: "OptekalPrice — FaB Card Price Compare",
+  description: "Compare Flesh and Blood card prices across Girafull, ActionPoint, StarCityGames & TCGPlayer",
 };
 
 export default function RootLayout({

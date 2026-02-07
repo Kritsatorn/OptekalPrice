@@ -80,7 +80,7 @@ export default function CsvDropZone({ onFiles }: CsvDropZoneProps) {
           />
         </svg>
         <p className="text-[13px] text-t-body font-medium">
-          Drop CardCrew CSV files here or click to browse
+          Drop OptekalPrice CSV files here or click to browse
         </p>
         <p className="text-[11px] text-t-muted">
           Import multiple buyer exports to aggregate

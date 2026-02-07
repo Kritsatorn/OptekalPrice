@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { ImportedBuyer, AggregatedCard } from '@/lib/types';
-import { parseCardCrewCSV, CsvParseError } from '@/lib/csvImport';
+import { parseOptekalCSV, CsvParseError } from '@/lib/csvImport';
 import { aggregateCards, computeSummaryStats, SummaryStats } from '@/lib/aggregateCards';
 
 export type DeckView = 'buyers' | 'aggregated';
@@ -29,7 +29,7 @@ export function useCommandDeck() {
 
     for (const file of Array.from(files)) {
       const text = await file.text();
-      const { buyer, error } = parseCardCrewCSV(text, file.name);
+      const { buyer, error } = parseOptekalCSV(text, file.name);
       if (error) {
         newErrors.push(error);
       } else if (buyer) {

@@ -49,7 +49,7 @@ function parseCSVLine(line: string): string[] {
   return fields;
 }
 
-export function parseCardCrewCSV(
+export function parseOptekalCSV(
   content: string,
   fileName: string,
 ): { buyer: ImportedBuyer | null; error: CsvParseError | null } {
@@ -58,7 +58,7 @@ export function parseCardCrewCSV(
   const lines = cleaned.split('\n');
 
   if (lines.length < 5) {
-    return { buyer: null, error: { fileName, message: 'File too short to be a valid CardCrew CSV' } };
+    return { buyer: null, error: { fileName, message: 'File too short to be a valid OptekalPrice CSV' } };
   }
 
   // Line 0: Buyer: <name>

@@ -1,6 +1,29 @@
 export type FoilType = 'NF' | 'RF' | 'CF' | 'EARF' | 'Marvel';
 export type CardLanguage = 'EN' | 'JP';
 
+// Price source types
+export type PriceSource = 'girafull' | 'actionpoint' | 'starcitygames' | 'tcgplayer';
+export type Currency = 'JPY' | 'SGD' | 'USD';
+
+export interface PriceSourceConfig {
+  id: PriceSource;
+  name: string;
+  currency: Currency;
+  region: string;
+  enabled: boolean;
+}
+
+export interface SourcePrice {
+  source: PriceSource;
+  currency: Currency;
+  price: number | null;
+  priceJPY: number | null;  // Converted for comparison
+  available: boolean;
+  productUrl: string;
+  setCode: string | null;
+  error?: string;
+}
+
 export interface ParsedCard {
   cardName: string;
   foilType: FoilType;
@@ -30,6 +53,8 @@ export interface CardSearchResult {
   setCode: string | null;
   error?: string;
   alternatives?: CardAlternative[];
+  sourcePrices?: SourcePrice[];  // Prices from all enabled sources
+  bestSource?: PriceSource;      // Source with best price
 }
 
 export interface DualCardResult {

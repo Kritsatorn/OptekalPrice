@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { CardSearchResult, CardLanguage, DualCardResult, ParsedCard } from '@/lib/types';
+import { CardSearchResult, CardLanguage, DualCardResult, ParsedCard, PriceSource } from '@/lib/types';
 import { parseCardList, ParseResult } from '@/lib/parseCardList';
 
 /** Build a text line from parts, e.g. "[EN] Take the Bait Red NF 3" */
@@ -18,6 +18,10 @@ function replaceLineInInput(input: string, oldLine: string, newLine: string): st
     lines[idx] = newLine;
   }
   return lines.join('\n');
+}
+
+interface UseCardSearchOptions {
+  enabledSources?: PriceSource[];
 }
 
 interface UseCardSearchReturn {
@@ -41,13 +45,16 @@ interface UseCardSearchReturn {
   isPickerMode: boolean;
 }
 
-export function useCardSearch(): UseCardSearchReturn {
+export function useCardSearch(options: UseCardSearchOptions = {}): UseCardSearchReturn {
   const [input, setInput] = useState('');
   const [buyerName, setBuyerName] = useState('');
   const [results, setResults] = useState<CardSearchResult[]>([]);
   const [parseErrors, setParseErrors] = useState<ParseResult['errors']>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+
+  // Use enabled sources from options directly (no internal state to avoid sync issues)
+  const enabledSources = options.enabledSources || ['girafull'];
 
   // Dual language state
   const [dualLang, setDualLangState] = useState(false);
@@ -60,7 +67,7 @@ export function useCardSearch(): UseCardSearchReturn {
   // Load dualLang preference from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('cardcrew-dual-lang');
+      const stored = localStorage.getItem('optekalprice-dual-lang');
       if (stored === 'true') setDualLangState(true);
     } catch {
       // ignore
@@ -70,7 +77,7 @@ export function useCardSearch(): UseCardSearchReturn {
   const setDualLang = useCallback((value: boolean) => {
     setDualLangState(value);
     try {
-      localStorage.setItem('cardcrew-dual-lang', String(value));
+      localStorage.setItem('optekalprice-dual-lang', String(value));
     } catch {
       // ignore
     }
@@ -144,7 +151,7 @@ export function useCardSearch(): UseCardSearchReturn {
       const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cards: parsed.cards, dualLang }),
+        body: JSON.stringify({ cards: parsed.cards, dualLang, enabledSources }),
       });
 
       if (!res.ok) {
@@ -214,7 +221,7 @@ export function useCardSearch(): UseCardSearchReturn {
     } finally {
       setIsSearching(false);
     }
-  }, [input, dualLang]);
+  }, [input, dualLang, enabledSources]);
 
   const searchFromList = useCallback(async (cards: ParsedCard[]) => {
     if (cards.length === 0) return;
@@ -232,7 +239,7 @@ export function useCardSearch(): UseCardSearchReturn {
       const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cards, dualLang }),
+        body: JSON.stringify({ cards, dualLang, enabledSources }),
       });
 
       if (!res.ok) {
@@ -286,7 +293,7 @@ export function useCardSearch(): UseCardSearchReturn {
     } finally {
       setIsSearching(false);
     }
-  }, [dualLang]);
+  }, [dualLang, enabledSources]);
 
   const clearResults = useCallback(() => {
     setResults([]);

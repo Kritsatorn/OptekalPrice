@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useCardSearch } from '@/hooks/useCardSearch';
+import { useSourceSettings } from '@/hooks/useSourceSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useBuildList } from '@/hooks/useBuildList';
 import { useCardBrowser } from '@/hooks/useCardBrowser';
@@ -18,8 +19,11 @@ import TabSwitcher from '@/components/TabSwitcher';
 import CardBrowser from '@/components/CardBrowser';
 import BuildList from '@/components/BuildList';
 import CommandDeck from '@/components/CommandDeck';
+import SourceSettingsPanel from '@/components/SourceSettingsPanel';
 
 export default function Home() {
+  const sourceSettings = useSourceSettings();
+
   const {
     input,
     setInput,
@@ -39,7 +43,7 @@ export default function Home() {
     selectLanguage,
     confirmSelections,
     isPickerMode,
-  } = useCardSearch();
+  } = useCardSearch({ enabledSources: sourceSettings.enabledSources });
 
   const { theme, toggle, mounted } = useTheme();
   const [activeTab, setActiveTab] = useState<'text' | 'browser' | 'deck'>('text');
@@ -104,9 +108,9 @@ export default function Home() {
         <div className="mb-6 md:mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-[28px] font-bold text-t-strong tracking-tight">
-              CardCrew
+              OptekalPrice
             </h1>
-            <p className="text-[13px] text-t-muted mt-1">Search Flesh and Blood cards on Girafull</p>
+            <p className="text-[13px] text-t-muted mt-1">Compare Flesh and Blood card prices across multiple shops</p>
           </div>
 
           {/* Theme toggle */}
@@ -135,6 +139,17 @@ export default function Home() {
           <div className="mb-5">
             <TabSwitcher activeTab={activeTab} onChange={handleTabChange} />
           </div>
+
+          {/* Price Sources Settings */}
+          {activeTab !== 'deck' && (
+            <div className="mb-5">
+              <SourceSettingsPanel
+                sources={sourceSettings.sources}
+                onToggle={sourceSettings.toggleSource}
+                activeCount={sourceSettings.activeCount}
+              />
+            </div>
+          )}
 
           {/* Buyer Info (shared between text & browser) */}
           {activeTab !== 'deck' && (
