@@ -70,18 +70,45 @@ export async function loadCardDatabase(): Promise<BrowserCard[]> {
   return cachedCards;
 }
 
+export interface SetFilterTag {
+  set: string;
+  label: string;
+  isNew?: boolean;
+}
+
+/** Curated set filter tags shown in the browser. Order matters. */
+export const SET_FILTER_TAGS: SetFilterTag[] = [
+  { set: 'Compendium Of Rathe', label: 'Compendium', isNew: true },
+  { set: 'Rosetta', label: 'Rosetta' },
+  { set: 'The Hunted', label: 'The Hunted' },
+  { set: 'Part the Mistveil', label: 'Part the Mistveil' },
+  { set: 'Dusk till Dawn', label: 'Dusk till Dawn' },
+  { set: 'Bright Lights', label: 'Bright Lights' },
+  { set: 'Heavy Hitters', label: 'Heavy Hitters' },
+  { set: 'High Seas', label: 'High Seas' },
+];
+
 export function searchCards(
   allCards: BrowserCard[],
   query: string,
   limit = 60,
+  setFilter?: string | null,
 ): BrowserCard[] {
   const q = query.toLowerCase().trim();
+
+  // When only set filter is active (no text query), return cards from that set
+  if (!q && setFilter) {
+    return allCards.filter((c) => c.sets.includes(setFilter)).slice(0, limit);
+  }
+
   if (!q) return [];
+
+  const pool = setFilter ? allCards.filter((c) => c.sets.includes(setFilter)) : allCards;
 
   const prefixMatches: BrowserCard[] = [];
   const substringMatches: BrowserCard[] = [];
 
-  for (const card of allCards) {
+  for (const card of pool) {
     const name = card.name.toLowerCase();
     if (name.startsWith(q)) {
       prefixMatches.push(card);

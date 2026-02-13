@@ -202,6 +202,8 @@ export default function Home() {
                   loadError={browser.loadError}
                   searchQuery={browser.searchQuery}
                   onSearchQueryChange={browser.setSearchQuery}
+                  setFilter={browser.setFilter}
+                  onToggleSetFilter={browser.toggleSetFilter}
                   searchResults={browser.searchResults}
                   selectedCard={browser.selectedCard}
                   onSelectCard={browser.selectCard}
@@ -263,7 +265,7 @@ export default function Home() {
               {/* Card Grid */}
               <div className="space-y-4">
                 <h2 className="text-title-md font-semibold text-t-strong">Results</h2>
-                <div className="grid gap-4 md:gap-[18px] lg:gap-grid-gap grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
                   {results.map((result, i) => (
                     <CardResult key={i} result={result} />
                   ))}

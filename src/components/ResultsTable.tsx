@@ -1,6 +1,7 @@
 'use client';
 
-import { CardSearchResult, FoilType, CardLanguage } from '@/lib/types';
+import { CardSearchResult, FoilType, CardLanguage, PriceSource } from '@/lib/types';
+import { formatPrice } from '@/lib/currency';
 
 const foilBadgeStyles: Record<FoilType, { base: string; glow: string }> = {
   NF: {
@@ -23,6 +24,14 @@ const foilBadgeStyles: Record<FoilType, { base: string; glow: string }> = {
     base: 'bg-gradient-to-r from-violet-500 to-purple-600 text-white',
     glow: 'glow-marvel',
   },
+};
+
+const SOURCE_NAMES: Record<PriceSource, string> = {
+  girafull: 'Girafull',
+  actionpoint: 'ActionPoint',
+  starcitygames: 'SCG',
+  tcgplayer: 'TCGplayer',
+  fabarmory: 'FAB Armory',
 };
 
 const langBadgeStyles: Record<CardLanguage, string> = {
@@ -64,6 +73,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Card ID</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Qty</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Price</th>
+                <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider">Best Source</th>
                 <th className="px-5 py-3.5 text-kicker font-medium text-t-muted uppercase tracking-wider text-right">Subtotal</th>
               </tr>
             </thead>
@@ -99,6 +109,26 @@ export default function ResultsTable({ results }: ResultsTableProps) {
                         <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${result.available ? 'bg-[var(--accent-success)]' : 'bg-[var(--accent-danger)]'}`} />
                       </span>
                     </td>
+                    <td className="px-5 py-3.5 text-t-muted text-[12px]">
+                      {result.bestSource ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                            {SOURCE_NAMES[result.bestSource]}
+                          </span>
+                          {result.sourcePrices && (() => {
+                            const best = result.sourcePrices.find(sp => sp.source === result.bestSource);
+                            if (best?.price && best.currency !== 'JPY') {
+                              return (
+                                <span className="text-[10px] text-t-muted">
+                                  ({formatPrice(best.price, best.currency)})
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </span>
+                      ) : '—'}
+                    </td>
                     <td className="px-5 py-3.5 text-right text-t-strong font-semibold">
                       ¥{(result.price! * result.quantity).toLocaleString()}
                     </td>
@@ -108,7 +138,7 @@ export default function ResultsTable({ results }: ResultsTableProps) {
             </tbody>
             <tfoot>
               <tr className="border-t border-divider dark:bg-white/[0.02] bg-muted-surface/30">
-                <td colSpan={6} className="px-5 py-4 text-right font-semibold text-t-strong text-title-sm">
+                <td colSpan={7} className="px-5 py-4 text-right font-semibold text-t-strong text-title-sm">
                   Grand Total
                 </td>
                 <td className="px-5 py-4 text-right font-bold text-metric-sm text-[var(--accent-success)]">

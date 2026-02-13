@@ -1,6 +1,6 @@
 'use client';
 
-import { BrowserCard } from '@/lib/cardDatabase';
+import { BrowserCard, SET_FILTER_TAGS } from '@/lib/cardDatabase';
 import CardBrowserTile from './CardBrowserTile';
 import AddToListPopup from './AddToListPopup';
 import { FoilType } from '@/lib/types';
@@ -10,6 +10,8 @@ interface CardBrowserProps {
   loadError: string | null;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
+  setFilter: string | null;
+  onToggleSetFilter: (set: string) => void;
   searchResults: BrowserCard[];
   selectedCard: BrowserCard | null;
   onSelectCard: (card: BrowserCard) => void;
@@ -38,6 +40,8 @@ export default function CardBrowser({
   loadError,
   searchQuery,
   onSearchQueryChange,
+  setFilter,
+  onToggleSetFilter,
   searchResults,
   selectedCard,
   onSelectCard,
@@ -65,6 +69,35 @@ export default function CardBrowser({
         />
       </div>
 
+      {/* Set filter tags */}
+      <div className="flex flex-wrap gap-2">
+        {SET_FILTER_TAGS.map((tag) => {
+          const isActive = setFilter === tag.set;
+          return (
+            <button
+              key={tag.set}
+              onClick={() => onToggleSetFilter(tag.set)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${
+                isActive
+                  ? 'bg-[var(--primary-400)] text-white border-[var(--primary-400)] shadow-sm'
+                  : 'bg-muted-surface dark:bg-white/5 text-t-muted border-divider hover:border-t-muted hover:text-t-body'
+              }`}
+            >
+              {tag.label}
+              {tag.isNew && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-amber-400/15 text-amber-500 dark:bg-amber-400/20 dark:text-amber-400'
+                }`}>
+                  NEW
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Loading state */}
       {isLoading && <SkeletonGrid />}
 
@@ -76,16 +109,18 @@ export default function CardBrowser({
       )}
 
       {/* Empty state */}
-      {!isLoading && !loadError && searchQuery && searchResults.length === 0 && (
+      {!isLoading && !loadError && (searchQuery || setFilter) && searchResults.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-[13px] text-t-muted">No cards found for &quot;{searchQuery}&quot;</p>
+          <p className="text-[13px] text-t-muted">
+            No cards found{searchQuery ? ` for "${searchQuery}"` : ''}{setFilter ? ` in ${setFilter}` : ''}
+          </p>
         </div>
       )}
 
       {/* Prompt state */}
-      {!isLoading && !loadError && !searchQuery && (
+      {!isLoading && !loadError && !searchQuery && !setFilter && (
         <div className="text-center py-8">
-          <p className="text-[13px] text-t-muted">Type a card name to start searching</p>
+          <p className="text-[13px] text-t-muted">Type a card name or select a set to browse</p>
         </div>
       )}
 

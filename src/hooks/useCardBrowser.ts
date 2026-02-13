@@ -7,6 +7,7 @@ export function useCardBrowser() {
   const [allCards, setAllCards] = useState<BrowserCard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [setFilter, setSetFilter] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<BrowserCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<BrowserCard | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export function useCardBrowser() {
     }
   }, []);
 
-  // Debounced search
+  // Debounced search (reacts to query and set filter)
   useEffect(() => {
     if (allCards.length === 0) {
       setSearchResults([]);
@@ -39,13 +40,17 @@ export function useCardBrowser() {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     debounceTimer.current = setTimeout(() => {
-      setSearchResults(searchCards(allCards, searchQuery));
+      setSearchResults(searchCards(allCards, searchQuery, 60, setFilter));
     }, 300);
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [searchQuery, allCards]);
+  }, [searchQuery, setFilter, allCards]);
+
+  const toggleSetFilter = useCallback((set: string) => {
+    setSetFilter((prev) => (prev === set ? null : set));
+  }, []);
 
   const selectCard = useCallback((card: BrowserCard) => {
     setSelectedCard(card);
@@ -60,6 +65,8 @@ export function useCardBrowser() {
     loadError,
     searchQuery,
     setSearchQuery,
+    setFilter,
+    toggleSetFilter,
     searchResults,
     selectedCard,
     selectCard,

@@ -40,12 +40,32 @@ interface SearchResponse {
   };
 }
 
+const COLORS = ['red', 'yellow', 'blue'];
+
+/**
+ * Strip color suffix (Red/Yellow/Blue) from card name for search queries.
+ * FAB stores often don't include pitch color in product titles.
+ */
+function stripColorSuffix(cardName: string): { baseName: string; color: string | null } {
+  const lower = cardName.toLowerCase();
+  for (const color of COLORS) {
+    if (lower.endsWith(` ${color}`)) {
+      return {
+        baseName: cardName.slice(0, -(color.length + 1)).trim(),
+        color,
+      };
+    }
+  }
+  return { baseName: cardName, color: null };
+}
+
 /**
  * Search ActionPoint using Shopify predictive search API
  */
 async function searchProducts(cardName: string): Promise<Array<{ handle: string; title: string }>> {
-  // Try predictive search first
-  const query = encodeURIComponent(cardName);
+  // Strip color suffix for search — stores don't include pitch color in titles
+  const { baseName } = stripColorSuffix(cardName);
+  const query = encodeURIComponent(baseName);
   const predictiveUrl = `${BASE_URL}/search/suggest.json?q=${query}&resources[type]=product&resources[limit]=10`;
 
   try {
@@ -86,7 +106,6 @@ async function searchProducts(cardName: string): Promise<Array<{ handle: string;
   const handles: Array<{ handle: string; title: string }> = [];
   const seen = new Set<string>();
 
-  // Extract product handles from search results
   const handleRegex = /href=["']\/products\/([^"'?#]+)["'][^>]*>([^<]*)/gi;
   let match;
   while ((match = handleRegex.exec(html)) !== null) {
@@ -97,7 +116,6 @@ async function searchProducts(cardName: string): Promise<Array<{ handle: string;
     }
   }
 
-  // Also look for data attributes
   const dataRegex = /data-product-handle=["']([^"']+)["']/gi;
   while ((match = dataRegex.exec(html)) !== null) {
     const handle = match[1];
@@ -137,23 +155,49 @@ function normalizeForMatch(name: string): string {
   return name.toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '').trim();
 }
 
+/**
+ * Match card name against product title.
+ * Handles the case where the user query includes a pitch color (Red/Yellow/Blue)
+ * but the product title does not (common for Majestic+ rarity cards).
+ */
 function matchesCardName(productTitle: string, userCardName: string): boolean {
   const productNorm = normalizeForMatch(productTitle);
   const userNorm = normalizeForMatch(userCardName);
 
   if (productNorm.includes(userNorm)) return true;
 
-  const colors = ['red', 'yellow', 'blue'];
-  for (const color of colors) {
+  // Check color suffix: if user says "Enlightened Strike Red" but product is
+  // "Enlightened Strike [WTR - WTR159]", match on the base name alone
+  for (const color of COLORS) {
     if (userNorm.endsWith(` ${color}`)) {
       const baseName = userNorm.slice(0, -(color.length + 1));
-      if (productNorm.includes(baseName) && productNorm.includes(color)) {
+      // Accept match if base name matches, regardless of whether color appears in product
+      if (productNorm.includes(baseName)) {
         return true;
       }
     }
   }
 
   return false;
+}
+
+/**
+ * Detect foil type from variant option strings.
+ * ActionPoint uses multi-variant products where foil type is in variant options.
+ */
+function detectFoilFromVariant(variant: ShopifyVariant): FoilType | null {
+  const text = [variant.title, variant.option1, variant.option2, variant.option3]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (text.includes('marvel')) return 'Marvel';
+  if (text.includes('extended art') && (text.includes('rainbow') || text.includes('foil'))) return 'EARF';
+  if (text.includes('cold foil')) return 'CF';
+  if (text.includes('rainbow foil')) return 'RF';
+  if (text.includes('normal') || text.includes('non-foil') || text.includes('non foil')) return 'NF';
+
+  return null;
 }
 
 function detectFoilType(title: string, tags: string[] = []): FoilType | null {
@@ -167,11 +211,11 @@ function detectFoilType(title: string, tags: string[] = []): FoilType | null {
     return 'EARF';
   }
 
-  if (tl.includes('cold foil') || tl.includes('cf') || allTags.includes('cold foil')) {
+  if (tl.includes('cold foil') || allTags.includes('cold foil')) {
     return 'CF';
   }
 
-  if (tl.includes('rainbow foil') || tl.includes('rf') || allTags.includes('rainbow')) {
+  if (tl.includes('rainbow foil') || allTags.includes('rainbow foil') || allTags.includes('rainbow')) {
     return 'RF';
   }
 
@@ -186,6 +230,40 @@ function detectFoilType(title: string, tags: string[] = []): FoilType | null {
   }
 
   return null;
+}
+
+/**
+ * Find the NM variant matching the requested foil type.
+ * ActionPoint uses multi-variant products with foil type in variant options
+ * (e.g., "Near Mint / English / Unlimited Edition Rainbow Foil").
+ */
+function extractPriceForFoil(
+  variants: ShopifyVariant[],
+  foilType: FoilType
+): { price: number | null; available: boolean } {
+  // First, try to find a variant that matches both foil type and NM condition
+  for (const v of variants) {
+    const variantFoil = detectFoilFromVariant(v);
+    if (variantFoil !== foilType) continue;
+
+    const t = (v.title + ' ' + (v.option1 || '')).toLowerCase();
+    const isNM = t.includes('near mint') || t.includes('nm') || t === 'default title';
+    if (isNM) {
+      const priceNum = parseFloat(v.price);
+      return { price: isNaN(priceNum) ? null : priceNum, available: v.available };
+    }
+  }
+
+  // If no NM+foil match, find any variant with matching foil type
+  for (const v of variants) {
+    const variantFoil = detectFoilFromVariant(v);
+    if (variantFoil === foilType) {
+      const priceNum = parseFloat(v.price);
+      return { price: isNaN(priceNum) ? null : priceNum, available: v.available };
+    }
+  }
+
+  return { price: null, available: false };
 }
 
 function extractNMPrice(variants: ShopifyVariant[]): { price: number | null; available: boolean } {
@@ -214,8 +292,12 @@ function extractNMPrice(variants: ShopifyVariant[]): { price: number | null; ava
 }
 
 function extractSetCode(title: string): string | null {
-  const match = title.match(/[\[\(]([A-Z]{2,5}\d+)[\]\)]/i);
-  return match ? match[1].toUpperCase() : null;
+  // Match patterns like [WTR - WTR159] or [WTR159] or (WTR159)
+  const fullMatch = title.match(/\[(?:[A-Z]+\s*-\s*)?([A-Z]{2,5}\d+)\]/i);
+  if (fullMatch) return fullMatch[1].toUpperCase();
+
+  const simpleMatch = title.match(/[\[\(]([A-Z]{2,5}\d+)[\]\)]/i);
+  return simpleMatch ? simpleMatch[1].toUpperCase() : null;
 }
 
 export const actionpointAdapter: PriceSourceAdapter = {
@@ -248,21 +330,42 @@ export const actionpointAdapter: PriceSourceAdapter = {
 
         if (!matchesCardName(product.title, card.cardName)) continue;
 
-        const detectedFoil = detectFoilType(product.title, product.tags);
-        if (detectedFoil !== card.foilType) continue;
+        // Check if this is a multi-variant product (foil types in variants)
+        const hasVariantFoils = product.variants.some(v => detectFoilFromVariant(v) !== null);
 
-        const { price, available } = extractNMPrice(product.variants);
-        const setCode = extractSetCode(product.title);
+        if (hasVariantFoils) {
+          // Multi-variant: find the specific variant matching the requested foil type
+          const { price, available } = extractPriceForFoil(product.variants, card.foilType);
+          if (price === null) continue; // This product doesn't have the requested foil type
 
-        return {
-          source: 'actionpoint',
-          currency: 'SGD',
-          price,
-          priceJPY: price ? convertToJPY(price, 'SGD') : null,
-          available,
-          productUrl: `${BASE_URL}/products/${product.handle}`,
-          setCode,
-        };
+          const setCode = extractSetCode(product.title);
+          return {
+            source: 'actionpoint',
+            currency: 'SGD',
+            price,
+            priceJPY: price ? convertToJPY(price, 'SGD') : null,
+            available,
+            productUrl: `${BASE_URL}/products/${product.handle}`,
+            setCode,
+          };
+        } else {
+          // Single-variant or no foil info in variants: detect from product title/tags
+          const detectedFoil = detectFoilType(product.title, product.tags);
+          if (detectedFoil !== card.foilType) continue;
+
+          const { price, available } = extractNMPrice(product.variants);
+          const setCode = extractSetCode(product.title);
+
+          return {
+            source: 'actionpoint',
+            currency: 'SGD',
+            price,
+            priceJPY: price ? convertToJPY(price, 'SGD') : null,
+            available,
+            productUrl: `${BASE_URL}/products/${product.handle}`,
+            setCode,
+          };
+        }
       }
 
       return {

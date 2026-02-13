@@ -4,6 +4,7 @@ import { girafullAdapter } from './girafull';
 import { actionpointAdapter } from './actionpoint';
 import { starcitygamesAdapter } from './starcitygames';
 import { tcgplayerAdapter } from './tcgplayer';
+import { fabarmoryAdapter } from './fabarmory';
 import { findBestPrice } from '../currency';
 
 // Registry of all available adapters
@@ -12,6 +13,7 @@ const adapters: Record<PriceSource, PriceSourceAdapter> = {
   actionpoint: actionpointAdapter,
   starcitygames: starcitygamesAdapter,
   tcgplayer: tcgplayerAdapter,
+  fabarmory: fabarmoryAdapter,
 };
 
 /**
@@ -150,3 +152,4 @@ export { girafullAdapter } from './girafull';
 export { actionpointAdapter } from './actionpoint';
 export { starcitygamesAdapter } from './starcitygames';
 export { tcgplayerAdapter } from './tcgplayer';
+export { fabarmoryAdapter } from './fabarmory';

@@ -6,6 +6,7 @@ const EXCHANGE_RATES: Record<Currency, number> = {
   JPY: 1,
   SGD: 113,  // 1 SGD ≈ 113 JPY
   USD: 155,  // 1 USD ≈ 155 JPY
+  NZD: 90,   // 1 NZD ≈ 90 JPY
 };
 
 /**
@@ -26,6 +27,8 @@ export function getCurrencySymbol(currency: Currency): string {
       return 'S$';
     case 'USD':
       return '$';
+    case 'NZD':
+      return 'NZ$';
     default:
       return '';
   }

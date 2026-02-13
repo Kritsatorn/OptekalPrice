@@ -2,8 +2,8 @@ export type FoilType = 'NF' | 'RF' | 'CF' | 'EARF' | 'Marvel';
 export type CardLanguage = 'EN' | 'JP';
 
 // Price source types
-export type PriceSource = 'girafull' | 'actionpoint' | 'starcitygames' | 'tcgplayer';
-export type Currency = 'JPY' | 'SGD' | 'USD';
+export type PriceSource = 'girafull' | 'actionpoint' | 'starcitygames' | 'tcgplayer' | 'fabarmory';
+export type Currency = 'JPY' | 'SGD' | 'USD' | 'NZD';
 
 export interface PriceSourceConfig {
   id: PriceSource;

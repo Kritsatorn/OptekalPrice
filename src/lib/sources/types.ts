@@ -66,4 +66,11 @@ export const DEFAULT_SOURCE_CONFIGS = [
     region: 'USA',
     enabled: false,
   },
+  {
+    id: 'fabarmory' as PriceSource,
+    name: 'FAB Armory',
+    currency: 'NZD' as Currency,
+    region: 'New Zealand',
+    enabled: false,
+  },
 ];

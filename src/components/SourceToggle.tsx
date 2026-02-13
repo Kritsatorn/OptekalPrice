@@ -14,12 +14,14 @@ function getSourceBadge(sourceId: PriceSource, currency: Currency): { symbol: st
     actionpoint: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     starcitygames: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
     tcgplayer: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    fabarmory: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   };
 
   const symbols: Record<Currency, string> = {
     JPY: '¥',
     SGD: 'S$',
     USD: '$',
+    NZD: 'NZ$',
   };
 
   return {

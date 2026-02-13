@@ -1,4 +1,13 @@
-import { CardSearchResult } from './types';
+import { CardSearchResult, PriceSource } from './types';
+import { formatPrice } from './currency';
+
+const SOURCE_NAMES: Record<PriceSource, string> = {
+  girafull: 'Girafull',
+  actionpoint: 'ActionPoint',
+  starcitygames: 'SCG',
+  tcgplayer: 'TCGplayer',
+  fabarmory: 'FAB Armory',
+};
 
 function detectLanguage(result: CardSearchResult): string {
   const title = result.productTitle.toLowerCase();
@@ -20,7 +29,20 @@ export function generateCSV(results: CardSearchResult[], buyerName: string): str
   lines.push(`Buyer: ${buyerName}`);
   lines.push(`Date: ${date}`);
   lines.push('');
-  lines.push('Card Name,Foil Type,Language,Card ID,Quantity,Price per Unit (JPY),Subtotal (JPY)');
+  // Collect all sources that appear in any result
+  const allSources = new Set<PriceSource>();
+  for (const result of results) {
+    if (result.sourcePrices) {
+      for (const sp of result.sourcePrices) {
+        allSources.add(sp.source);
+      }
+    }
+  }
+  const sourceList = Array.from(allSources);
+
+  const sourceHeaders = sourceList.map(s => SOURCE_NAMES[s] || s).join(',');
+  const headerSuffix = sourceList.length > 0 ? `,Best Source,${sourceHeaders}` : '';
+  lines.push(`Card Name,Foil Type,Language,Card ID,Quantity,Price per Unit (JPY),Subtotal (JPY)${headerSuffix}`);
 
   let grandTotal = 0;
 
@@ -34,7 +56,18 @@ export function generateCSV(results: CardSearchResult[], buyerName: string): str
     const lang = detectLanguage(result);
     const set = result.setCode || '';
 
-    lines.push(`${name},${csvEscape(result.foilType)},${csvEscape(lang)},${csvEscape(set)},${result.quantity},${result.price},${subtotal}`);
+    let sourceSuffix = '';
+    if (sourceList.length > 0) {
+      const bestName = result.bestSource ? (SOURCE_NAMES[result.bestSource] || result.bestSource) : '';
+      const sourcePrices = sourceList.map(s => {
+        const sp = result.sourcePrices?.find(p => p.source === s);
+        if (!sp || sp.error || sp.price === null) return '';
+        return formatPrice(sp.price, sp.currency);
+      }).join(',');
+      sourceSuffix = `,${csvEscape(bestName)},${sourcePrices}`;
+    }
+
+    lines.push(`${name},${csvEscape(result.foilType)},${csvEscape(lang)},${csvEscape(set)},${result.quantity},${result.price},${subtotal}${sourceSuffix}`);
   }
 
   lines.push('');
