@@ -45,8 +45,8 @@ export function parseCardList(input: string): ParseResult {
     }
 
     // The token at lastIndex should be the foil type
-    const foilToken = tokens[lastIndex].toUpperCase();
-    const foilType = VALID_FOIL_TYPES.find(f => f === foilToken);
+    const foilToken = tokens[lastIndex];
+    const foilType = VALID_FOIL_TYPES.find(f => f.toUpperCase() === foilToken.toUpperCase());
 
     if (!foilType) {
       errors.push({ line, message: `Invalid foil type "${tokens[lastIndex]}". Use: NF, RF, CF, EARF, Marvel` });
